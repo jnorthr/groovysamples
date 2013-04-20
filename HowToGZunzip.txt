@@ -1,0 +1,206 @@
+// read: http://commons.apache.org/compress/apidocs/org/apache/commons/compress/archivers/ArchiveStreamFactory.html
+public class ArchiveStreamFactory
+extends Object
+
+Factory to create Archive[In|Out]putStreams from names or the first bytes of the InputStream. In order add other implementations you should extend ArchiveStreamFactory and override the appropriate methods (and call their implementation from super of course).
+// Compressing a ZIP-File:
+
+ final OutputStream out = new FileOutputStream(output); 
+ ArchiveOutputStream os = new ArchiveStreamFactory().createArchiveOutputStream(ArchiveStreamFactory.ZIP, out);
+ 
+ os.putArchiveEntry(new ZipArchiveEntry("testdata/test1.xml"));
+ IOUtils.copy(new FileInputStream(file1), os);
+ os.closeArchiveEntry();
+
+ os.putArchiveEntry(new ZipArchiveEntry("testdata/test2.xml"));
+ IOUtils.copy(new FileInputStream(file2), os);
+ os.closeArchiveEntry();
+ os.close();
+ 
+
+// Decompressing a ZIP-File:
+
+ final InputStream is = new FileInputStream(input); 
+ ArchiveInputStream in = new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.ZIP, is);
+ ZipArchiveEntry entry = (ZipArchiveEntry)in.getNextEntry();
+ OutputStream out = new FileOutputStream(new File(dir, entry.getName()));
+ IOUtils.copy(in, out);
+ out.close();
+ in.close();
+ 
+
+// --------------------------------------
+def zip(String s){
+def targetStream = new ByteArrayOutputStream()
+def zipStream = new GZIPOutputStream(targetStream)
+zipStream.write(s.getBytes())
+zipStream.close()
+def zipped = targetStream.toByteArray()
+targetStream.close()
+return zipped.encodeBase64()
+}
+
+// ========================================
+//define zip closure first, then allocate it
+ //it is needed to make the recursion work
+ def zip
+ zip = { ZipOutputStream zipOutStream,File f , String path->                       
+    def name = (path.equals(""))?f.name:path + File.separator + f.name
+    if(!f.isDirectory() ){                           
+      def entry = new ZipEntry(name)
+      zipOutStream.putNextEntry(entry)
+      new FileInputStream(f).withStream { inStream ->
+        def buffer = new byte[1024]
+        def count
+        while((count = inStream.read(buffer, 0, 1024)) != -1) {
+          zipOutStream.write(buffer,0,count)
+        }
+      }
+      zipOutStream.closeEntry()
+    }
+    else {
+      //write the directory first, in order to allow empty directories
+      def entry = new ZipEntry(name + File.separator)
+      zipOutStream.putNextEntry(entry)
+      zipOutStream.closeEntry()                           
+      f.eachFile{
+        //recurse
+        zip(zipOutStream,it,name)
+      }
+    }
+ }
+ 
+ File.metaClass.zip = { String destination ->
+    //cache the delegate (the File Object) as it will be modified
+    //in the withStream closure
+    def input = delegate           
+    def result = new ZipOutputStream(new FileOutputStream(destination))
+    result.withStream {zipOutStream->  
+      //recursively zip files            
+      zip(zipOutStream,input,"")
+    }
+ }
+// ===========================
+File.metaClass.unzip = { String dest ->
+ //in metaclass added methods, 'delegate' is the object on which
+ //the method is called. Here it's the file to unzip
+ def result = new ZipInputStream(new FileInputStream(delegate))
+ def destFile = new File(dest)
+ if(!destFile.exists()){
+   destFile.mkdir();
+ }
+ result.withStream{
+   def entry
+   while(entry = result.nextEntry){
+     if (!entry.isDirectory()){
+       new File(dest + File.separator + entry.name).parentFile?.mkdirs()
+       def output = new FileOutputStream(dest + File.separator
+                                         + entry.name)                       
+       output.withStream{
+         int len = 0;
+         byte[] buffer = new byte[4096]
+         while ((len = result.read(buffer)) > 0){
+           output.write(buffer, 0, len);
+         }
+       }
+    }
+    else {
+      new File(dest + File.separator + entry.name).mkdir()
+    }
+   }
+ }
+}
+// =====================================
+// -- sample GZ Input --
+import java.util.zip.GZIPInputStream
+// make the intial connection and check for gzip format
+def conn
+def stream
+try {
+// gzipped data
+conn = new URL(url).openConnection()
+stream = new GZIPInputStream(conn.getInputStream())
+} catch(e) {
+// not gzipped
+conn = new URL(url).openConnection()
+stream = conn.getInputStream()
+}
+// =========================================
+// see: http://stackoverflow.com/questions/11851075/how-to-access-files-in-a-tar-file-in-java?rq=1
+
+/** Untar an input file into an output file.
+
+ * The output file is created in the output folder, having the same name
+ * as the input file, minus the '.tar' extension. 
+ * 
+ * @param inputFile     the input .tar file
+ * @param outputDir     the output directory file. 
+ * @throws IOException 
+ * @throws FileNotFoundException
+ *  
+ * @return  The {@link List} of {@link File}s with the untared content.
+ * @throws ArchiveException 
+ */
+private static List<File> unTar(final File inputFile, final File outputDir) throws FileNotFoundException, IOException, ArchiveException {
+
+    LOG.info(String.format("Untaring %s to dir %s.", inputFile.getAbsolutePath(), outputDir.getAbsolutePath()));
+
+    final List<File> untaredFiles = new LinkedList<File>();
+    final InputStream is = new FileInputStream(inputFile); 
+    final TarArchiveInputStream debInputStream = (TarArchiveInputStream) new ArchiveStreamFactory().createArchiveInputStream("tar", is);
+    TarArchiveEntry entry = null; 
+    while ((entry = (TarArchiveEntry)debInputStream.getNextEntry()) != null) {
+        final File outputFile = new File(outputDir, entry.getName());
+        if (entry.isDirectory()) {
+            LOG.info(String.format("Attempting to write output directory %s.", outputFile.getAbsolutePath()));
+            if (!outputFile.exists()) {
+                LOG.info(String.format("Attempting to create output directory %s.", outputFile.getAbsolutePath()));
+                if (!outputFile.mkdirs()) {
+                    throw new IllegalStateException(String.format("Couldn't create directory %s.", outputFile.getAbsolutePath()));
+                }
+            }
+        } else {
+            LOG.info(String.format("Creating output file %s.", outputFile.getAbsolutePath()));
+            final OutputStream outputFileStream = new FileOutputStream(outputFile); 
+            IOUtils.copy(debInputStream, outputFileStream);
+            outputFileStream.close();
+        }
+        untaredFiles.add(outputFile);
+    }
+    debInputStream.close(); 
+
+    return untaredFiles;
+}
+
+/**
+ * Ungzip an input file into an output file.
+ * <p>
+ * The output file is created in the output folder, having the same name
+ * as the input file, minus the '.gz' extension. 
+ * 
+ * @param inputFile     the input .gz file
+ * @param outputDir     the output directory file. 
+ * @throws IOException 
+ * @throws FileNotFoundException
+ *  
+ * @return  The {@File} with the ungzipped content.
+ */
+private static File unGzip(final File inputFile, final File outputDir) throws FileNotFoundException, IOException {
+
+    LOG.info(String.format("Ungzipping %s to dir %s.", inputFile.getAbsolutePath(), outputDir.getAbsolutePath()));
+
+    final File outputFile = new File(outputDir, inputFile.getName().substring(0, inputFile.getName().length() - 3));
+
+    final GZIPInputStream in = new GZIPInputStream(new FileInputStream(inputFile));
+    final FileOutputStream out = new FileOutputStream(outputFile);
+
+    for (int c = in.read(); c != -1; c = in.read()) {
+        out.write(c);
+    }
+
+    in.close();
+    out.close();
+
+    return outputFile;
+}
+// ======================
