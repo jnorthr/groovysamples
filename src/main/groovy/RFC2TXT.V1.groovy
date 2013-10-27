@@ -60,7 +60,7 @@ if (number > 0)
   { 
     def ad = addr(it)
     print ad 
-    fn = "/Users/jim/Desktop/rfc${it}.txt";
+    fn = "./rfc${it}.txt";
     println " and the output fn = "+fn    
     
     file3 = new File(fn)
