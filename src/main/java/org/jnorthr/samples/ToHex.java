@@ -11,8 +11,8 @@ import java.awt.*;
  * are all signed, this implementation is not robust and will produce ? char.s if byte translation
  * is suspect. For example -128 etc values need more work.
  */
-public class ToHex
-        extends JFCFrame
+public class ToHex extends JFrame
+        // extends JFCFrame
         implements KeyListener
 
 {

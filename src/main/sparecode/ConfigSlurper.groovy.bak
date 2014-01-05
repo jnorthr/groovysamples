@@ -1,0 +1,163 @@
+// see: http://groovy.codehaus.org/ConfigSlurper
+//  or http://mrhaki.blogspot.fr/2009/08/grassroots-groovy-configuration-with.html
+
+// Had to write aas a class as configSlurper won't work as script
+// ConfigSlurper is a utility class within Groovy for writing properties file like scripts for performing configuration. Unlike regular Java properties files
+// ConfigSlurper scripts support native Java types and are structured like a tree.
+// Below is an example of how you could configure Log4j with a ConfigSlurper script:
+import groovy.util.ConfigSlurper;
+import java.net.*;
+import java.util.*;
+import groovy.util.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+import java.awt.*
+
+public class ConfigTool
+{
+
+    def say = System.out.&println
+
+/*
+    P.S If file path is not specified, then this properties file will be stored in your project root folder.
+
+    Properties prop = new Properties();
+ 
+    try {
+        //load a properties file
+        prop.load(new FileInputStream("config.properties"));
+ 
+        //get the property value and print it out
+        System.out.println(prop.getProperty("database"));
+        System.out.println(prop.getProperty("dbuser"));
+        System.out.println(prop.getProperty("dbpassword"));
+ 
+     } 
+     catch (IOException ex) 
+     {
+            ex.printStackTrace();
+     }
+
+//For non-static method, use this :
+    prop.load(getClass().getClassLoader().getResourceAsStream("config.properties");));
+*/
+
+
+def u = new File('resources/log.properties').toURI().toURL();
+def e = new File('resources/environment.properties').toURI().toURL();
+
+def conf
+def config
+
+/* log.properties
+log4j.appender.stdout = "org.apache.log4j.ConsoleAppender"
+log4j.appender."stdout.layout"="org.apache.log4j.PatternLayout"
+log4j.rootLogger="error,stdout"
+log4j.logger.org.springframework="info,stdout"
+log4j.additivity.org.springframework=false
+*/
+
+    public ConfigTool()
+    { 
+        // To load this into a readable config you can do:
+        conf = new ConfigSlurper()
+        config = conf.parse(u);
+        //new File('/Volumes/FHD-XS/TextEditor/TextEditor/editordata/log.properties').toURL()
+        
+        String backColor = config.colors.background;
+        Dimension size = new Dimension(config.window.width as int, config.window.height as int);
+        say "backColor set to "+backColor;
+
+        assert "info,stdout" == config.log4j.logger.org.springframework
+        assert false == config.log4j.additivity.org.springframework
+    } // end of constructor
+    
+
+/*
+Special "environments" Configuration
+
+The ConfigSlurper class has a special constructor other than the default constructor that takes an "environment" parameter. 
+This special constructor works in concert with a property setting called environments. This allows a default setting to 
+exist in the property file that can be over-written by a setting in a specific environment closure. This allows multiple 
+related configurations to be stored in the same file. Note: the environments closure is not directly parsable. Without 
+using the special environment constructor the closure is ignored.
+*/
+    public ConfigTool(String env)  // "development"
+    { 
+        // To load this into a readable config you can do:
+        conf = new ConfigSlurper(env)
+        config = conf.parse(e);
+
+        assert config.sample.foo == "dev_foo"
+        assert config.sample.bar == "default_bar"
+        
+        conf = new ConfigSlurper("test")
+        config = conf.parse(e);
+        assert config.sample.foo == "default_foo";
+        assert config.sample.bar == "test_bar"      
+    } // end of constructor 
+
+    /*
+        You can merge ConfigSlurper configs to make a single config object. For example:    
+    */
+    def mergeConfigs()
+    {
+        def config1 = new ConfigSlurper().parse(u)
+        def config2 = new ConfigSlurper().parse(e)
+        config1 = config1.merge(config2)    
+    } // end of merge
+    
+    
+    /*
+        Converting to and from Java properties files
+        You can convert ConfigSlurper configs to and from Java properties files. For example:    
+    */
+    def getJavaProp()
+    {
+        java.util.Properties props = new Properties(); // load from somewhere
+        props.load(new FileInputStream("config.properties")); // assumes project root folder
+
+        // load a properties file from class path, inside static method
+        // props.load(App.class.getClassLoader().getResourceAsStream("config.properties");));
+        
+        // For non-static methods, use this :
+        // props.load(getClass().getClassLoader().getResourceAsStream("config.properties");));
+                
+        //set the properties value
+        props.setProperty("database", "localhost");
+        props.setProperty("dbuser", "jnorthr");
+        props.setProperty("dbpassword", "password");
+ 
+        //save properties to project root folder
+        props.store(new FileOutputStream("config.properties"), null);
+        
+        def config2 = new ConfigSlurper().parse(props)
+        props2 = config2.toProperties()
+    } // end of method
+    
+    
+    /*
+        You can write ConfigSlurper configs to files. For example:    
+    */
+    def putConfig()
+    {
+        def config = new ConfigSlurper().parse(u)
+        new File("resources/fred.properties").withWriter { writer ->
+             config.writeTo(writer)
+        } // end of write
+    } // end of method
+
+    
+    public static void main(String[] args)
+    {
+        println "-- starting ConfigTool() ---"    
+        def ct = new ConfigTool();
+        println "-- end of default testing --"
+
+        println "-- load config for 'development' ---"    
+        ct = new ConfigTool("development");
+        println "-- the end ---"    
+    } // end of method
+    
+} // end of class

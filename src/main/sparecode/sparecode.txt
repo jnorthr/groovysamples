@@ -1,0 +1,59 @@
+/*
+panel(constraints: BorderLayout.SOUTH) 
+{
+	button text: 'Save', actionPerformed: 
+	{
+		println address
+	}
+}
+        def b1 = button(text:'Picker',actionPerformed:{println "basic";})
+                                    // icon:imageIcon(url:'http://www.google.com/favicon.ico'
+        // end of add
+*/
+
+
+/*
+        panel(constraints:BorderLayout.NORTH) 
+        {
+		widget(pane) 
+        }
+
+        panel(constraints:BorderLayout.CENTER) 
+        {
+		widget(panelx) 
+        }
+
+
+        panel(constraints:BorderLayout.CENTER, background:Color.RED) 
+        {
+            widget(id:'w1',panelx)
+        }
+	widget(splitPane);
+
+	splitPane(orientation:JSplitPane.VERTICAL_SPLIT, resizeWeight:0.33d )  //, dividerLocation:32) //,minimumSize:[300,200])
+	{
+		widget(pane) 
+		widget(panelx)
+	}
+--- */
+
+// No multiple selections permitted, ever, even though this is called a combo box.
+// so there is nothing we need to do to prevent them.
+/*
+def theListener = new ItemListener()
+{
+surround comments here /  *	
+      * Called whenever the value of the selection changes. Will
+      * be called twice for every change.
+      * @param e the event that characterizes the change.
+      
+     itemStateChanged( ItemEvent e )
+      {
+      		int selectedIndex = flavour.getSelectedIndex();
+            // even though JComboBox is generic, you still need the (String) cast, a legacy quirk.
+            String choice = ( String ) flavour.getSelectedItem();
+            System.out.println( selectedIndex + " " + choice);   // + " " + e.toString() );
+      }
+};
+
+*/

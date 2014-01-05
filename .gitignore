@@ -1,7 +1,9 @@
 *.class
-
+.git/
+.gradle/
 # Package Files #
 *.jar
 *.war
 *.ear
 .DS_Store
+src/main/java/org/jnorthr/.DS_Store
