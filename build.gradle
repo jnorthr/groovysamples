@@ -20,8 +20,9 @@ repositories {
 }
 
 dependencies {
-    groovy localGroovy()
-    groovy group: 'org.apache.ivy', name:'ivy', version:'2.2.0' 
+	compile 'org.codehaus.groovy:groovy-all:2.4.7'
+	testCompile 'org.codehaus.groovy:groovy-all:2.4.7'
+    compile 'org.apache.ivy:ivy:2.4.0' 
     testCompile 'junit:junit:4.11'
     compile group: 'javax.servlet',        name: 'servlet-api', version: '2.5' 
     //compile group: 'mysql-connector-java', name:'mysql', version: '5.1.6'
@@ -57,5 +58,5 @@ defaultTasks 'runSimple'
 
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '1.10'
+    gradleVersion = '2.14'
 }
